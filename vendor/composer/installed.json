@@ -1,0 +1,71 @@
+{
+    "packages": [
+        {
+            "name": "woocommerce/action-scheduler",
+            "version": "dev-trunk",
+            "version_normalized": "dev-trunk",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/woocommerce/action-scheduler.git",
+                "reference": "64ddf091c71baf1614cc2b9baa2528490c8858f2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/woocommerce/action-scheduler/zipball/64ddf091c71baf1614cc2b9baa2528490c8858f2",
+                "reference": "64ddf091c71baf1614cc2b9baa2528490c8858f2",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^7.5",
+                "woocommerce/woocommerce-sniffs": "0.1.0",
+                "wp-cli/wp-cli": "~2.5.0",
+                "yoast/phpunit-polyfills": "^2.0"
+            },
+            "time": "2025-06-06T19:53:05+00:00",
+            "default-branch": true,
+            "type": "wordpress-plugin",
+            "extra": {
+                "scripts-description": {
+                    "test": "Run unit tests",
+                    "phpcs": "Analyze code against the WordPress coding standards with PHP_CodeSniffer",
+                    "phpcbf": "Fix coding standards warnings/errors automatically with PHP Code Beautifier"
+                }
+            },
+            "installation-source": "dist",
+            "archive": {
+                "exclude": [
+                    "node_modules"
+                ]
+            },
+            "scripts": {
+                "test": [
+                    "./vendor/bin/phpunit tests -c tests/phpunit.xml.dist"
+                ],
+                "phpcs": [
+                    "phpcs -s -p"
+                ],
+                "phpcs-pre-commit": [
+                    "phpcs -s -p -n"
+                ],
+                "phpcbf": [
+                    "phpcbf -p"
+                ]
+            },
+            "license": [
+                "GPL-3.0-or-later"
+            ],
+            "description": "Action Scheduler for WordPress and WooCommerce",
+            "homepage": "https://actionscheduler.org/",
+            "support": {
+                "source": "https://github.com/woocommerce/action-scheduler/tree/trunk",
+                "issues": "https://github.com/woocommerce/action-scheduler/issues"
+            },
+            "install-path": "../woocommerce/action-scheduler"
+        }
+    ],
+    "dev": true,
+    "dev-package-names": []
+}

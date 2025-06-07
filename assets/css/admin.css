@@ -1,0 +1,6 @@
+.ec-status-in-progress {
+  color: green;
+}
+.ec-status-completed {
+  color: blue;
+}
