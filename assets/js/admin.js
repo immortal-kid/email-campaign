@@ -33,11 +33,11 @@
         contentType: false,
       })
         .done((res) => {
-         + const d = res.data;           // payload lives here
-        $('#ec_upload_result').html(
+          const d = res.data; // payload lives here
+          $("#ec_upload_result").html(
             `<p><strong>${d.valid}</strong> valid, ` +
-            `${d.invalid} invalid, ${d.duplicates} duplicates</p>`
-        );
+              `${d.invalid} invalid, ${d.duplicates} duplicates</p>`
+          );
         })
         .fail((xhr) => {
           alert(xhr.responseJSON ? xhr.responseJSON.data : "Upload failed");
