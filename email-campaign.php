@@ -2,7 +2,7 @@
 /*
 Plugin Name: Email Campaign
 Description: Transactional email campaigns with scheduling and reporting.
-Version: 1.0.014
+Version: 1.0.015
 Author: ChatGPT
 License: GPLv2 or later
 */
