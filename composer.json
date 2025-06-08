@@ -1,20 +1,41 @@
 {
-  "name": "anirudh/email-campaign",
-  "description": "WordPress Email Campaign plugin",
+  "name": "anibytes/email-campaign",
+  "description": "Transactional email-campaign plugin for WordPress with drip scheduling, contact management and detailed reporting.",
   "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Anirudh BS",
+      "homepage": "https://your-site.com",
+      "role": "Developer"
+    }
+  ],
   "require": {
     "php": ">=7.4",
-    "phpoffice/phpspreadsheet": "^1.29",
-    "wp-action-scheduler/action-scheduler": "^3.7"
+    "composer/installers": "^2.2",
+    "phpoffice/phpspreadsheet": "^4.3",
+    "woocommerce/action-scheduler": "^3.9"
   },
   "autoload": {
     "psr-4": {
-      "EmailCampaign\\": "includes/"
+      "EC\\\\": "includes/"
     }
   },
+  "require-dev": {
+    "wp-coding-standards/wpcs": "^3.0"
+  },
+  "extra": {
+    "installer-name": "email-campaign"
+  },
   "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true,
     "allow-plugins": {
-      "composer/installers": true
+      "composer/installers": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true
     }
-  }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
 }

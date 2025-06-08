@@ -2,7 +2,9 @@
 namespace EC;
 
 defined( 'ABSPATH' ) || exit;
-
+if ( ! class_exists( '\\WP_List_Table' ) ) {
+    require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
+}
 class Contact_Manager {
     public static function init() {
         add_action( 'admin_menu', [ __CLASS__, 'menu' ] );
