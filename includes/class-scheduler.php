@@ -31,11 +31,11 @@ class Scheduler {
 
         $i = 0;
         foreach ( $subs as $sub ) {
-            \ActionScheduler\ActionScheduler::schedule_single_action(
-                time() + ( $i * 3 ),
-                self::ACTION_HOOK,
-                [ $campaign_id, $sub->id ]
-            );
+            as_schedule_single_action(
+             time() + ( $i * 3 ),
+             self::ACTION_HOOK,
+             [ $campaign_id, $sub->id ]
+          );
             $i++;
         }
     }

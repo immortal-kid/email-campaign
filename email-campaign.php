@@ -104,3 +104,7 @@ add_action( 'plugins_loaded', function () {
     EC\Tracking::init();
     EC\Reports::init();
 } );
+// Load Action Scheduler bootstrap if it isn't already loaded
+if ( ! class_exists( 'Action_Scheduler' ) && file_exists( EC_PLUGIN_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
+    require_once EC_PLUGIN_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
