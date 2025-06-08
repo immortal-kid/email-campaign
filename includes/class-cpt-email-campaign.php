@@ -10,6 +10,27 @@ class CPT_Email_Campaign {
         add_action( 'save_post', [ __CLASS__, 'save_meta' ], 10, 2 );
         add_filter( 'manage_email_campaign_posts_columns', [ __CLASS__, 'columns' ] );
         add_action( 'manage_email_campaign_posts_custom_column', [ __CLASS__, 'column_content' ], 10, 2 );
+
+        add_action( 'admin_enqueue_scripts', function ( $hook ) {
+    if ( $hook !== 'post.php' && $hook !== 'post-new.php' ) {
+        return;
+    }
+    if ( get_current_screen()->post_type !== 'email_campaign' ) {
+        return;
+    }
+    wp_enqueue_script(
+        'ec-admin',
+        EC_PLUGIN_URL . 'assets/js/admin.js',
+        [ 'jquery' ],
+        EC_PLUGIN_VERSION,
+        true
+    );
+    wp_localize_script( 'ec-admin', 'EC_Ajax', [
+        'ajax_url' => admin_url( 'admin-ajax.php' ),
+        'nonce'    => wp_create_nonce( 'ec_upload' ),
+    ] );
+} );
+
     }
 
     public static function register_cpt() {
@@ -50,10 +71,13 @@ class CPT_Email_Campaign {
             <label>Pre‑header:</label><br/>
             <input type="text" name="ec_preheader" value="<?php echo esc_attr( $preheader ); ?>" class="widefat"/>
         </p>
-        <p>
-            <label>Upload CSV/XLSX (Email, First Name):</label><br/>
-            <input type="file" name="ec_contacts_file" accept=".csv, .xlsx"/>
-        </p>
+       <p>
+    <label>Upload CSV/XLSX (Email, First Name):</label><br/>
+    <input type="file" id="ec_contacts_file" accept=".csv, .xlsx"/>
+    <button type="button" class="button" id="ec_upload_btn">Upload &amp; Import</button>
+</p>
+<div id="ec_upload_result"></div>
+
         <?php
     }
 

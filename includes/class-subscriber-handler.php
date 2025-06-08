@@ -6,9 +6,33 @@ defined( 'ABSPATH' ) || exit;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class Subscriber_Handler {
+    
  public static function init() {
-        // currently nothing to hook globally
+   add_action( 'wp_ajax_ec_upload_contacts', [ 'EC\\Subscriber_Handler', 'ajax_upload' ] );
     }
+
+ 
+public static function ajax_upload() {
+    check_ajax_referer( 'ec_upload', 'security' );
+
+    $post_id = absint( $_POST['post_id'] ?? 0 );
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        wp_send_json_error( 'No permission', 403 );
+    }
+
+    if ( empty( $_FILES['contacts_file']['tmp_name'] ) ) {
+        wp_send_json_error( 'No file', 400 );
+    }
+
+    $handler = new self();
+    [$valid, $invalid, $duplicates] = $handler->import_file( $post_id, $_FILES['contacts_file'], true );
+
+    wp_send_json_success( [
+        'valid'      => $valid,
+        'invalid'    => $invalid,
+        'duplicates' => $duplicates,
+    ] );
+}
     public function import_file( $campaign_id, $file ) {
         if ( ! current_user_can( 'edit_post', $campaign_id ) ) {
             return;
@@ -107,4 +131,6 @@ foreach ( $rows as $index => $row ) {
             ], $location );
         } );
     }
+        return [ $valid, $invalid, $duplicates ];
+
 }
