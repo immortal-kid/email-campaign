@@ -2,18 +2,19 @@
   "name": "anirudh/email-campaign",
   "description": "WordPress Email Campaign plugin",
   "type": "wordpress-plugin",
-    "require": {
-    "php": ">=7.4"
-  },
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "https://github.com/woocommerce/action-scheduler"
-    }
-  ],
   "require": {
-    "woocommerce/action-scheduler": "dev-trunk"
+    "php": ">=7.4",
+    "phpoffice/phpspreadsheet": "^1.29",
+    "wp-action-scheduler/action-scheduler": "^3.7"
   },
-  "minimum-stability": "dev",
-  "prefer-stable": true
+  "autoload": {
+    "psr-4": {
+      "EmailCampaign\\": "includes/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    }
+  }
 }

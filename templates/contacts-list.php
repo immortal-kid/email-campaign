@@ -1,26 +1,73 @@
 <?php
-// File: templates/contacts-list.php
+// templates/contacts-list.php
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+// This file expects a variable named $contacts to be available,
+// which should be an array of associative arrays (each representing a contact).
+
+if (!isset($contacts) || !is_array($contacts) || empty($contacts)) {
+    echo '<p>No contacts found.</p>';
+    return;
 }
-
-// Ensure our list class is available
-if ( ! class_exists( 'EC_Contacts_List' ) ) {
-    require_once WP_PLUGIN_DIR . '/email-campaign/includes/class-contact-manager.php';
-}
-
-// Instantiate and prepare the list table
-$list_table = new EC_Contacts_List( 'email_contacts' );
-$list_table->prepare_items();
 ?>
-<div class="wrap">
-    <h1><?php esc_html_e( 'Contacts', 'email-campaign' ); ?></h1>
-    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-        <input type="hidden" name="action" value="ec_export_contacts">
-        <?php submit_button( __( 'Export to CSV', 'email-campaign' ), 'secondary', 'submit', false ); ?>
-    </form>
-    <form id="contacts-table-form">
-        <?php $list_table->display(); ?>
-    </form>
+
+<div class="contacts-container">
+    <h2>Your Contacts</h2>
+    <a href="add-contact.php" class="btn-add">Add New Contact</a>
+    <ul>
+        <?php foreach ($contacts as $contact): ?>
+            <li>
+                <strong><?php echo htmlspecialchars($contact['name']); ?></strong> (<?php echo htmlspecialchars($contact['email']); ?>)
+                <br>
+                Phone: <?php echo htmlspecialchars($contact['phone'] ?? 'N/A'); ?>
+                <div class="contact-actions">
+                    <a href="view-contact.php?id=<?php echo urlencode($contact['id']); ?>">View</a> |
+                    <a href="edit-contact.php?id=<?php echo urlencode($contact['id']); ?>">Edit</a> |
+                    <a href="delete-contact.php?id=<?php echo urlencode($contact['id']); ?>" onclick="return confirm('Are you sure you want to delete this contact?');">Delete</a>
+                </div>
+            </li>
+        <?php endforeach; ?>
+    </ul>
 </div>
+
+<style>
+    .contacts-container {
+        margin: 20px;
+        font-family: Arial, sans-serif;
+    }
+    .contacts-container ul {
+        list-style: none;
+        padding: 0;
+    }
+    .contacts-container li {
+        border: 1px solid #eee;
+        padding: 10px;
+        margin-bottom: 10px;
+        background-color: #fff;
+        border-radius: 5px;
+    }
+    .contact-actions {
+        margin-top: 5px;
+        font-size: 0.9em;
+    }
+    .contact-actions a {
+        margin-right: 5px;
+        text-decoration: none;
+        color: #007bff;
+    }
+    .contact-actions a:hover {
+        text-decoration: underline;
+    }
+    .btn-add {
+        display: inline-block;
+        background-color: #28a745;
+        color: white;
+        padding: 8px 15px;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .btn-add:hover {
+        background-color: #218838;
+    }
+</style>

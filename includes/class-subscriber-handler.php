@@ -1,149 +1,132 @@
 <?php
-// File: includes/class-subscriber-handler.php
+/**
+ * Handles parsing uploaded Excel/CSV files and storing subscribers.
+ *
+ * @package Email_Campaign_Pro
+ * @subpackage Includes
+ */
 
+namespace EmailCampaign;
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Exception;
+
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use PhpOffice\PhpSpreadsheet\IOFactory;
+class Subscriber_Handler {
 
-class EC_Subscriber_Handler {
-
-    private $table;
-    private $contacts_table;
-
-    public function __construct() {
+    /**
+     * Create the custom database table for campaign subscribers.
+     */
+    public static function create_subscriber_table() {
         global $wpdb;
-        $this->table          = $wpdb->prefix . 'email_campaigns_subscribers';
-        $this->contacts_table = $wpdb->prefix . 'email_contacts';
+        $table_name = $wpdb->prefix . 'email_campaigns_subscribers';
+        $charset_collate = $wpdb->get_charset_collate();
 
-        // When a campaign is published, parse its upload
-        add_action( 'publish_email_campaign', [ $this, 'parse_uploaded_list' ], 20, 2 );
+        $sql = "CREATE TABLE $table_name (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            campaign_id bigint(20) UNSIGNED NOT NULL,
+            email varchar(255) NOT NULL,
+            name varchar(255) DEFAULT '',
+            status varchar(50) DEFAULT 'pending' NOT NULL, -- pending, sent, failed, unsubscribed, bounced
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY campaign_id (campaign_id),
+            KEY email (email),
+            KEY status (status)
+        ) $charset_collate;";
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
     }
 
     /**
-     * Parse the uploaded CSV/XLSX and insert subscribers + contacts.
+     * Parses an Excel/CSV file and stores valid subscribers.
+     *
+     * @param int    $campaign_id      The ID of the email campaign post.
+     * @param string $file_path        The full path to the uploaded file.
+     * @return array|WP_Error An array with upload statistics or WP_Error on failure.
      */
-    public function parse_uploaded_list( $post_id, $post ) {
-        $upload_id = get_post_meta( $post_id, '_ec_upload_id', true );
-        if ( ! $upload_id ) {
-            return;
-        }
+    public function parse_and_store_subscribers( $campaign_id, $file_path ) {
+        global $wpdb;
+        $table_subscribers = $wpdb->prefix . 'email_campaigns_subscribers';
 
-        $file_path = get_attached_file( $upload_id );
-        if ( ! file_exists( $file_path ) ) {
-            return;
-        }
+        $valid_emails_count = 0;
+        $invalid_emails_count = 0;
+        $duplicates_skipped_count = 0;
+        $processed_emails = array(); // To track duplicates within the current file.
 
-        // Load spreadsheet
+        // Clear existing subscribers for this campaign before importing new ones.
+        $wpdb->delete( $table_subscribers, array( 'campaign_id' => $campaign_id ) );
+
         try {
             $spreadsheet = IOFactory::load( $file_path );
+            $sheet = $spreadsheet->getActiveSheet();
+            $highestRow = $sheet->getHighestRow();
+
+            // Prepare data for bulk insert.
+            $insert_data = array();
+            $contact_manager = new Contact_Manager(); // To interact with central contacts table.
+
+            for ( $row = 1; $row <= $highestRow; $row++ ) {
+                $email = ec_pro_sanitize_email( $sheet->getCell( 'A' . $row )->getValue() );
+                $first_name = ec_pro_sanitize_text( $sheet->getCell( 'B' . $row )->getValue() );
+
+                if ( ! is_email( $email ) ) {
+                    $invalid_emails_count++;
+                    continue;
+                }
+
+                if ( in_array( $email, $processed_emails ) ) {
+                    $duplicates_skipped_count++;
+                    continue;
+                }
+
+                // Check against central contacts for unsubscribed/bounced
+                $contact_status = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM {$wpdb->prefix}email_contacts WHERE email = %s", $email ) );
+                if ( in_array( $contact_status, array( 'unsubscribed', 'bounced' ) ) ) {
+                    $duplicates_skipped_count++; // Treat as skipped for this campaign
+                    continue;
+                }
+
+                $processed_emails[] = $email; // Mark as processed for this file.
+
+                $insert_data[] = $wpdb->prepare(
+                    "(%d, %s, %s, %s, %s)",
+                    $campaign_id,
+                    $email,
+                    $first_name,
+                    'pending', // Initial status for campaign subscriber.
+                    current_time( 'mysql' )
+                );
+                $valid_emails_count++;
+
+                // Import/update in central contacts table.
+                $contact_manager->add_or_update_contact( $email, $first_name, $campaign_id );
+            }
+
+            // Perform bulk insert if data exists.
+            if ( ! empty( $insert_data ) ) {
+                $values = implode( ',', $insert_data );
+                $sql = "INSERT INTO {$table_subscribers} (campaign_id, email, name, status, created_at) VALUES $values";
+                $wpdb->query( $sql );
+            }
+
+        } catch ( Exception $e ) {
+            error_log( 'Email Campaign Pro: PhpSpreadsheet error - ' . $e->getMessage() );
+            return new \WP_Error( 'file_parse_error', __( 'Error parsing the uploaded file.', 'email-campaign' ) );
         } catch ( \Exception $e ) {
-            error_log( 'EC Spreadsheet load error: ' . $e->getMessage() );
-            return;
+            error_log( 'Email Campaign Pro: General file processing error - ' . $e->getMessage() );
+            return new \WP_Error( 'file_process_error', __( 'An unexpected error occurred during file processing.', 'email-campaign' ) );
         }
 
-        $rows = $spreadsheet->getActiveSheet()->toArray( null, true, true, true );
-        if ( empty( $rows ) ) {
-            return;
-        }
-
-        // Determine header columns (case‐insensitive)
-        $header = array_change_key_case( $rows[1], CASE_LOWER );
-        $email_col   = array_search( 'email',   $header );
-        $name_col    = array_search( 'name',    $header );
-        $company_col = array_search( 'company', $header );
-
-        if ( $email_col === false ) {
-            error_log( 'EC Subscriber Handler: No "email" column found.' );
-            return;
-        }
-
-        global $wpdb;
-        $valid   = 0;
-        $invalid = 0;
-        $dup     = 0;
-        $seen    = [];
-
-        foreach ( $rows as $row_index => $row ) {
-            // Skip header row
-            if ( $row_index === 1 ) {
-                continue;
-            }
-
-            $email   = isset( $row[ $email_col ] )   ? sanitize_email(   $row[ $email_col ] )   : '';
-            $name    = isset( $name_col )    && isset( $row[ $name_col ] )    ? sanitize_text_field( $row[ $name_col ] )    : '';
-            $company = isset( $company_col ) && isset( $row[ $company_col ] ) ? sanitize_text_field( $row[ $company_col ] ) : '';
-
-            if ( ! is_email( $email ) ) {
-                $invalid++;
-                continue;
-            }
-            if ( in_array( $email, $seen, true ) ) {
-                $dup++;
-                continue;
-            }
-            $seen[] = $email;
-
-            // Insert into subscribers table
-            $exists = $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->table} WHERE campaign_id = %d AND email = %s",
-                $post_id, $email
-            ) );
-            if ( $exists ) {
-                $dup++;
-                continue;
-            }
-
-            $inserted = $wpdb->insert(
-                $this->table,
-                [
-                    'campaign_id' => $post_id,
-                    'email'       => $email,
-                    'name'        => $name,
-                    'company'     => $company,
-                    'status'      => 'pending',
-                    'created_at'  => current_time( 'mysql', 1 ),
-                ],
-                [ '%d', '%s', '%s', '%s', '%s', '%s' ]
-            );
-            if ( $inserted ) {
-                $valid++;
-            }
-
-            // Upsert into contacts table
-            $contact_exists = $wpdb->get_var( $wpdb->prepare(
-                "SELECT id FROM {$this->contacts_table} WHERE email = %s",
-                $email
-            ) );
-            if ( $contact_exists ) {
-                $wpdb->update(
-                    $this->contacts_table,
-                    [ 'name' => $name, 'company' => $company, 'last_campaign_id' => $post_id ],
-                    [ 'id'   => $contact_exists ],
-                    [ '%s', '%s', '%d' ],
-                    [ '%d' ]
-                );
-            } else {
-                $wpdb->insert(
-                    $this->contacts_table,
-                    [
-                        'email'            => $email,
-                        'name'             => $name,
-                        'company'          => $company,
-                        'status'           => 'active',
-                        'created_at'       => current_time( 'mysql', 1 ),
-                        'last_campaign_id' => $post_id,
-                    ],
-                    [ '%s', '%s', '%s', '%s', '%s', '%d' ]
-                );
-            }
-        }
-
-        // Clean up the uploaded file
-        wp_delete_attachment( $upload_id, true );
-
-        // Store import stats for admin feedback
-        update_post_meta( $post_id, '_ec_import_stats', compact( 'valid', 'invalid', 'dup' ) );
+        return array(
+            'valid'      => $valid_emails_count,
+            'invalid'    => $invalid_emails_count,
+            'duplicates' => $duplicates_skipped_count,
+        );
     }
 }

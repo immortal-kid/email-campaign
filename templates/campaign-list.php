@@ -1,44 +1,83 @@
 <?php
-// File: templates/campaign-list.php
+// templates/campaign-list.php
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+// This file expects a variable named $campaigns to be available,
+// which should be an array of associative arrays (each representing a campaign).
+
+if (!isset($campaigns) || !is_array($campaigns) || empty($campaigns)) {
+    echo '<p>No campaigns found.</p>';
+    return;
 }
+?>
 
-/**
- * Add our custom columns to the Email Campaign CPT list.
- */
-add_filter( 'manage_email_campaign_posts_columns', function( $columns ) {
-    $columns['ec_status'] = __( 'Status', 'email-campaign' );
-    $columns['ec_report'] = __( 'Report', 'email-campaign' );
-    return $columns;
-} );
+<div class="campaigns-container">
+    <h2>Marketing Campaigns</h2>
+    <a href="create-campaign.php" class="btn-create">Create New Campaign</a>
+    <div class="campaigns-grid">
+        <?php foreach ($campaigns as $campaign): ?>
+            <div class="campaign-card">
+                <h3><?php echo htmlspecialchars($campaign['name']); ?></h3>
+                <p><strong>Status:</strong> <span class="status-<?php echo strtolower(htmlspecialchars($campaign['status'])); ?>"><?php echo htmlspecialchars($campaign['status']); ?></span></p>
+                <p><strong>Start Date:</strong> <?php echo htmlspecialchars(date('M d, Y', strtotime($campaign['startDate']))); ?></p>
+                <p><strong>End Date:</strong> <?php echo htmlspecialchars(date('M d, Y', strtotime($campaign['endDate']))); ?></p>
+                <div class="campaign-actions">
+                    <a href="view-campaign.php?id=<?php echo urlencode($campaign['id']); ?>">Details</a> |
+                    <a href="edit-campaign.php?id=<?php echo urlencode($campaign['id']); ?>">Edit</a>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
 
-/**
- * Render content for our custom columns.
- */
-add_action( 'manage_email_campaign_posts_custom_column', function( $column, $post_id ) {
-    global $wpdb;
-    $subs_table = $wpdb->prefix . 'email_campaigns_subscribers';
-    $sent_count = $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM {$subs_table} WHERE campaign_id = %d AND status = %s",
-        $post_id, 'sent'
-    ) );
-    $total_count = $wpdb->get_var( $wpdb->prepare(
-        "SELECT COUNT(*) FROM {$subs_table} WHERE campaign_id = %d",
-        $post_id
-    ) );
-
-    if ( $column === 'ec_status' ) {
-        printf(
-            '<span class="ec-status-in-progress">%d/%d sent</span>',
-            intval( $sent_count ),
-            intval( $total_count )
-        );
+<style>
+    .campaigns-container {
+        margin: 20px;
+        font-family: Arial, sans-serif;
     }
-
-    if ( $column === 'ec_report' ) {
-        $url = admin_url( 'admin.php?page=email_campaign_report&post_id=' . $post_id );
-        printf( '<a href="%s">%s</a>', esc_url( $url ), esc_html__( 'View Report', 'email-campaign' ) );
+    .btn-create {
+        display: inline-block;
+        background-color: #007bff;
+        color: white;
+        padding: 8px 15px;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-bottom: 15px;
     }
-}, 10, 2 );
+    .btn-create:hover {
+        background-color: #0056b3;
+    }
+    .campaigns-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    .campaign-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        background-color: #fff;
+    }
+    .campaign-card h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    .campaign-card p {
+        font-size: 0.9em;
+        line-height: 1.5;
+        color: #555;
+    }
+    .campaign-actions a {
+        margin-right: 10px;
+        text-decoration: none;
+        color: #007bff;
+    }
+    .campaign-actions a:hover {
+        text-decoration: underline;
+    }
+    .status-active { color: #28a745; font-weight: bold; }
+    .status-pending { color: #ffc107; font-weight: bold; }
+    .status-completed { color: #6c757d; font-weight: bold; }
+    .status-draft { color: #17a2b8; font-weight: bold; }
+</style>
