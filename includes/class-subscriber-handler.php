@@ -6,17 +6,34 @@ defined( 'ABSPATH' ) || exit;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class Subscriber_Handler {
-
+ public static function init() {
+        // currently nothing to hook globally
+    }
     public function import_file( $campaign_id, $file ) {
         if ( ! current_user_can( 'edit_post', $campaign_id ) ) {
             return;
         }
 
-        $tmp = $file['tmp_name'];
-        $type = $file['type'];
+        $tmp  = $file['tmp_name'];
+        $ext  = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
+$uploads = wp_upload_dir();
+$dest    = trailingslashit( $uploads['basedir'] ) . 'email-campaign/';
+wp_mkdir_p( $dest );                          // create dir if missing
+$stored   = $dest . basename( $file['name'] );
+copy( $tmp, $stored );                        // keeps a permanent copy
 
         try {
-            $spreadsheet = IOFactory::load( $tmp );
+            if ( $ext === 'csv' ) {
+                // Explicit CSV reader so PhpSpreadsheet doesn’t mis-detect delimiters
+                $reader = IOFactory::createReader( 'Csv' );
+                $reader->setDelimiter( ',' );
+                $reader->setEnclosure( '"' );
+                $reader->setSheetIndex( 0 );   // first sheet
+                $spreadsheet = $reader->load( $tmp );
+            } else {
+                // xls / xlsx / ods handled automatically
+                $spreadsheet = IOFactory::load( $tmp );
+            }
         } catch ( \Throwable $e ) {
             wp_die( 'Failed to read spreadsheet: ' . $e->getMessage() );
         }

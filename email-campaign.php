@@ -19,6 +19,10 @@ define( 'EC_PLUGIN_VERSION', '1.0.0' );
  */
 if ( file_exists( EC_PLUGIN_PATH . 'vendor/autoload.php' ) ) {
     require_once EC_PLUGIN_PATH . 'vendor/autoload.php';
+}else {
+    add_action( 'admin_notices', function () {
+        echo '<div class="notice notice-error"><p><strong>Email Campaign:</strong> Run <code>composer install</code> in the plugin folder to load PhpSpreadsheet & Action Scheduler.</p></div>';
+    } );
 }
 
 // -----------------------------------------------------------------------------

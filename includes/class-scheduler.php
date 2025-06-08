@@ -10,8 +10,17 @@ class Scheduler {
 
     public static function init() {
         add_action( self::ACTION_HOOK, [ __CLASS__, 'send_email' ], 10, 2 );
+          add_action( 'transition_post_status', [ __CLASS__, 'maybe_queue' ], 10, 3 );
     }
-
+    public static function maybe_queue( $new_status, $old_status, $post ) {
+        if ( $post->post_type !== 'email_campaign' ) {
+            return;
+        }
+        // Only fire the first time we go from anything → publish
+        if ( 'publish' === $new_status && 'publish' !== $old_status ) {
+            self::queue_campaign( $post->ID );
+        }
+    }
     public static function queue_campaign( $campaign_id ) {
         global $wpdb;
         $subs_table = $wpdb->prefix . 'email_campaigns_subscribers';
