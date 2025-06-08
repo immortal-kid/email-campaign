@@ -16,11 +16,11 @@ class Subscriber_Handler {
 
         $tmp  = $file['tmp_name'];
         $ext  = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
-$uploads = wp_upload_dir();
-$dest    = trailingslashit( $uploads['basedir'] ) . 'email-campaign/';
-wp_mkdir_p( $dest );                          // create dir if missing
-$stored   = $dest . basename( $file['name'] );
-copy( $tmp, $stored );                        // keeps a permanent copy
+        $uploads = wp_upload_dir();
+        $dest    = trailingslashit( $uploads['basedir'] ) . 'email-campaign/';
+        wp_mkdir_p( $dest );                          // create dir if missing
+        $stored   = $dest . basename( $file['name'] );
+        copy( $tmp, $stored );                        // keeps a permanent copy
 
         try {
             if ( $ext === 'csv' ) {
@@ -38,8 +38,24 @@ copy( $tmp, $stored );                        // keeps a permanent copy
             wp_die( 'Failed to read spreadsheet: ' . $e->getMessage() );
         }
 
-        $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray( null, true, true, true );
+        $sheet  = $spreadsheet->getActiveSheet();
+$rows   = $sheet->toArray(null, true, true, true);
+
+/* ── NEW: find which column contains the word "mail" or "email" ── */
+$header = array_map('strtolower', $rows[1]);   // first row
+$emailCol = array_search('mail', $header);
+if ($emailCol === false) {
+    $emailCol = array_search('email', $header);
+}
+$nameCol  = array_search('name',  $header);
+
+/* Replace letters A/B with dynamic keys */
+foreach ( $rows as $index => $row ) {
+    if ( $index === 1 ) { continue; }          // skip header
+    $email = trim( $row[ $emailCol ] ?? '' );
+    $name  = $nameCol !== false ? trim( $row[ $nameCol ] ?? '' ) : '';
+ 
+}
 
         global $wpdb;
         $contacts_table = $wpdb->prefix . 'email_contacts';
